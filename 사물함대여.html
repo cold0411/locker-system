@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>도서관 사물함 신청 사이트</title>
+
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+font-family:Arial, Helvetica, sans-serif;
+background:linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55)),url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+background-attachment:scroll;
+color:#111;
+min-height:100vh;
+touch-action:manipulation;
+}
+
+header{
+background:#111827;
+color:#fff;
+padding:14px 16px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:10px;
+flex-wrap:wrap;
+position:sticky;
+top:0;
+z-index:20;
+}
+
+header .nav-buttons{
+display:flex;
+gap:8px;
+flex-wrap:wrap;
+}
+
+.container{
+max-width:1200px;
+margin:16px auto;
+padding:16px;
+background:rgba(255,255,255,.94);
+border-radius:14px;
+box-shadow:0 8px 30px rgba(0,0,0,.16);
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(70px,1fr));
+gap:8px;
+}
+
+.locker{
+background:#fff;
+border:1px solid #d1d5db;
+padding:12px 8px;
+text-align:center;
+border-radius:10px;
+font-size:14px;
+cursor:pointer;
+min-height:52px;
+display:flex;
+align-items:center;
+justify-content:center;
+user-select:none;
+}
+
+.locker.pending{background:#fef3c7;cursor:not-allowed}
+.locker.approved{background:#22c55e;color:#fff;cursor:not-allowed}
+
+button{
+padding:10px 14px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+background:#111827;
+color:#fff;
+font-size:14px;
+min-height:42px;
+}
+button.secondary{background:#e5e7eb;color:#111827}
+button:active{transform:scale(.98)}
+
+.modal{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.5);
+display:flex;
+align-items:center;
+justify-content:center;
+padding:16px;
+z-index:100;
+overflow:auto;
+}
+.modal-box{
+background:#fff;
+padding:18px;
+width:100%;
+max-width:380px;
+border-radius:14px;
+max-height:90vh;
+overflow:auto;
+}
+.modal-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:12px;
+gap:10px;
+}
+.modal-header h3{margin:0;font-size:20px}
+
+label{display:block;font-size:14px;font-weight:700;margin-bottom:6px}
+input{
+width:100%;
+padding:12px;
+margin-bottom:12px;
+border-radius:8px;
+border:1px solid #d1d5db;
+font-size:16px;
+background:#fff;
+}
+
+.hidden{display:none !important}
+.admin-card{
+background:#fff;
+padding:12px;
+border-radius:10px;
+border:1px solid #e5e7eb;
+margin-bottom:12px;
+font-size:14px;
+}
+.admin-actions{
+margin-top:10px;
+display:flex;
+gap:6px;
+flex-wrap:wrap;
+}
+.section-title{margin-top:20px;font-weight:700;font-size:18px}
+.success-msg{
+background:#dcfce7;
+color:#166534;
+padding:10px;
+border-radius:8px;
+margin:10px 0 14px;
+font-size:14px;
+}
+.top-actions{margin-bottom:10px}
+.helper{color:#6b7280;font-size:13px;margin:-2px 0 10px}
+
+@media (max-width:768px){
+.container{
+margin:10px;
+padding:14px;
+}
+header{
+padding:12px;
+}
+header .nav-buttons,
+.admin-actions{
+width:100%;
+}
+header .nav-buttons button,
+.admin-actions button,
+#applyBtn,
+#loginBtn,
+#resetAllBtn{
+flex:1 1 auto;
+}
+.grid{
+grid-template-columns:repeat(auto-fill,minmax(62px,1fr));
+gap:6px;
+}
+.locker{
+font-size:13px;
+min-height:48px;
+padding:10px 6px;
+}
+.modal{
+padding:10px;
+align-items:flex-start;
+}
+.modal-box{
+max-width:100%;
+margin-top:10px;
+padding:16px;
+}
+}
+
+@media (max-width:480px){
+.container{
+margin:8px;
+padding:12px;
+}
+.grid{
+grid-template-columns:repeat(4,1fr)}
+h2{font-size:22px;margin:8px 0 12px}
+button{font-size:13px}
+.modal-header h3{font-size:18px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div>도서관 사물함 신청</div>
+  <div class="nav-buttons">
+    <button type="button" onclick="showUser()">사용자</button>
+    <button type="button" onclick="openAdminLogin()">관리자</button>
+  </div>
+</header>
+
+<div class="container">
+  <div id="userPage">
+    <h2>사물함 신청 (1~600)</h2>
+    <div class="helper">모바일에서도 번호를 눌러 바로 신청할 수 있다.</div>
+    <div id="successMsg" class="success-msg hidden">신청되었습니다.</div>
+    <div class="grid" id="lockerGrid"></div>
+  </div>
+
+  <div id="adminPage" class="hidden">
+    <h2>관리자 승인 페이지</h2>
+    <div class="top-actions">
+      <button id="resetAllBtn" type="button" onclick="resetApplicants()" class="secondary">신청자 목록 초기화</button>
+    </div>
+
+    <div class="section-title">신청 대기 목록</div>
+    <div id="pendingList"></div>
+
+    <div class="section-title">승인 완료 목록</div>
+    <div id="approvedList"></div>
+  </div>
+</div>
+
+<div id="modal" class="modal hidden" aria-hidden="true">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="lockerTitle"></h3>
+      <button type="button" class="secondary" onclick="closeModal()">닫기</button>
+    </div>
+    <form id="applyForm">
+      <label for="dept">학과</label>
+      <input id="dept" placeholder="예: 반도체공학과" autocomplete="organization">
+
+      <label for="studentId">학번</label>
+      <input id="studentId" placeholder="예: 20260001" inputmode="numeric">
+
+      <label for="name">이름</label>
+      <input id="name" placeholder="예: 홍길동" autocomplete="name">
+
+      <label for="phone">전화번호</label>
+      <input id="phone" placeholder="예: 010-1234-5678" inputmode="tel" autocomplete="tel">
+
+      <button id="applyBtn" type="submit">신청</button>
+    </form>
+  </div>
+</div>
+
+<div id="adminLogin" class="modal hidden" aria-hidden="true">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>관리자 로그인</h3>
+      <button type="button" class="secondary" onclick="closeAdminLogin()">닫기</button>
+    </div>
+    <form id="loginForm">
+      <input id="adminPass" type="password" placeholder="비밀번호" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button id="loginBtn" type="submit">로그인</button>
+    </form>
+  </div>
+</div>
+
+<div id="adminModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>신청자 정보</h3>
+      <button type="button" class="secondary" onclick="closeAdminModal()">닫기</button>
+    </div>
+    <div id="adminInfo"></div>
+    <div class="admin-actions">
+      <button type="button" onclick="approveSelected()">승인</button>
+      <button type="button" class="secondary" onclick="rejectSelected()">거절</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOTAL = 600;
+const ADMIN_PASSWORD = 'LAC1234@';
+
+let lockers = [];
+let selectedLocker = null;
+let selectedAdminLocker = null;
+
+function init(){
+  const saved = localStorage.getItem('lockers');
+  if(saved){
+    lockers = JSON.parse(saved);
+  } else {
+    for(let i=1;i<=TOTAL;i++){
+      lockers.push({ number:i, status:'available', applicant:null });
+    }
+  }
+  render();
+}
+
+function save(){
+  localStorage.setItem('lockers', JSON.stringify(lockers));
+}
+
+function render(){
+  renderLockers();
+  renderAdmin();
+}
+
+function renderLockers(){
+  const grid = document.getElementById('lockerGrid');
+  grid.innerHTML = '';
+
+  lockers.forEach(l => {
+    const div = document.createElement('div');
+    div.className = 'locker ' + l.status;
+    div.textContent = '#' + l.number;
+
+    if(l.status === 'available'){
+      div.addEventListener('click', () => openModal(l.number));
+      div.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        openModal(l.number);
+      }, { passive:false });
+    }
+
+    grid.appendChild(div);
+  });
+}
+
+function openModal(num){
+  selectedLocker = num;
+  document.getElementById('lockerTitle').textContent = '사물함 ' + num;
+  document.getElementById('modal').classList.remove('hidden');
+  document.getElementById('modal').setAttribute('aria-hidden','false');
+  setTimeout(() => document.getElementById('dept').focus(), 50);
+}
+
+function closeModal(){
+  document.getElementById('modal').classList.add('hidden');
+  document.getElementById('modal').setAttribute('aria-hidden','true');
+}
+
+function submitApplication(){
+  const dept = document.getElementById('dept').value.trim();
+  const id = document.getElementById('studentId').value.trim();
+  const name = document.getElementById('name').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+
+  if(!dept || !id || !name || !phone){
+    alert('모든 정보를 입력해야 한다');
+    return;
+  }
+
+  const duplicate = lockers.find(l => l.applicant && (l.applicant.id === id || l.applicant.phone === phone));
+  if(duplicate){
+    alert('같은 학번 또는 전화번호로 중복 신청할 수 없다');
+    return;
+  }
+
+  const locker = lockers.find(l => l.number === selectedLocker);
+  if(locker.status !== 'available'){
+    alert('이미 신청된 사물함이다');
+    return;
+  }
+
+  locker.status = 'pending';
+  locker.applicant = { dept, id, name, phone };
+
+  save();
+  closeModal();
+
+  const msg = document.getElementById('successMsg');
+  msg.classList.remove('hidden');
+  setTimeout(() => msg.classList.add('hidden'), 2000);
+
+  document.getElementById('applyForm').reset();
+  render();
+}
+
+function renderAdmin(){
+  const pending = document.getElementById('pendingList');
+  const approved = document.getElementById('approvedList');
+  pending.innerHTML = '';
+  approved.innerHTML = '';
+
+  lockers.forEach(l => {
+    if(l.status === 'pending'){
+      const div = document.createElement('div');
+      div.className = 'admin-card';
+      div.innerHTML = `
+        사물함 ${l.number} / ${l.applicant.name}
+        <div class="admin-actions">
+          <button type="button" onclick="openAdminModal(${l.number})">정보 확인</button>
+        </div>`;
+      pending.appendChild(div);
+    }
+
+    if(l.status === 'approved'){
+      const div = document.createElement('div');
+      div.className = 'admin-card';
+      div.innerHTML = `
+        사물함 ${l.number} / ${l.applicant.name}
+        <div class="admin-actions">
+          <button type="button" onclick="openAdminModal(${l.number})">정보 확인</button>
+        </div>`;
+      approved.appendChild(div);
+    }
+  });
+}
+
+function openAdminModal(num){
+  selectedAdminLocker = num;
+  const l = lockers.find(x => x.number === num);
+  document.getElementById('adminInfo').innerHTML = `
+    사물함 ${l.number}<br>
+    학과: ${l.applicant.dept}<br>
+    학번: ${l.applicant.id}<br>
+    이름: ${l.applicant.name}<br>
+    전화번호: ${l.applicant.phone}`;
+  document.getElementById('adminModal').classList.remove('hidden');
+  document.getElementById('adminModal').setAttribute('aria-hidden','false');
+}
+
+function closeAdminModal(){
+  document.getElementById('adminModal').classList.add('hidden');
+  document.getElementById('adminModal').setAttribute('aria-hidden','true');
+}
+
+function approveSelected(){
+  const l = lockers.find(x => x.number === selectedAdminLocker);
+  l.status = 'approved';
+  save();
+  closeAdminModal();
+  render();
+}
+
+function rejectSelected(){
+  const l = lockers.find(x => x.number === selectedAdminLocker);
+  l.status = 'available';
+  l.applicant = null;
+  save();
+  closeAdminModal();
+  render();
+}
+
+function resetApplicants(){
+  if(!confirm('신청자 목록을 모두 초기화할까요?')) return;
+  lockers.forEach(l => {
+    if(l.status !== 'available'){
+      l.status = 'available';
+      l.applicant = null;
+    }
+  });
+  save();
+  render();
+}
+
+function openAdminLogin(){
+  document.getElementById('adminLogin').classList.remove('hidden');
+  document.getElementById('adminLogin').setAttribute('aria-hidden','false');
+  setTimeout(() => document.getElementById('adminPass').focus(), 50);
+}
+
+function closeAdminLogin(){
+  document.getElementById('adminLogin').classList.add('hidden');
+  document.getElementById('adminLogin').setAttribute('aria-hidden','true');
+  document.getElementById('adminPass').value = '';
+}
+
+function loginAdmin(){
+  const pass = document.getElementById('adminPass').value;
+  if(pass === ADMIN_PASSWORD){
+    showAdmin();
+    closeAdminLogin();
+  } else {
+    alert('비밀번호가 틀렸다');
+  }
+}
+
+function showAdmin(){
+  document.getElementById('adminPage').classList.remove('hidden');
+  document.getElementById('userPage').classList.add('hidden');
+}
+
+function showUser(){
+  document.getElementById('userPage').classList.remove('hidden');
+  document.getElementById('adminPage').classList.add('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+
+  document.getElementById('applyForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    submitApplication();
+  });
+
+  document.getElementById('loginForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    loginAdmin();
+  });
+});
+</script>
+</body>
+</html>
